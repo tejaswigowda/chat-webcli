@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>WebLLM Chat</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      background: #0f1117;
+      color: #e2e8f0;
+      height: 100dvh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    header {
+      padding: 14px 20px;
+      background: #1a1d27;
+      border-bottom: 1px solid #2d3148;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    header h1 {
+      font-size: 1.1rem;
+      font-weight: 600;
+      color: #a78bfa;
+      white-space: nowrap;
+    }
+
+    #model-select {
+      flex: 1;
+      min-width: 220px;
+      background: #252836;
+      color: #e2e8f0;
+      border: 1px solid #3d4265;
+      border-radius: 8px;
+      padding: 8px 10px;
+      font-size: 0.85rem;
+      cursor: pointer;
+    }
+
+    #load-btn {
+      padding: 8px 18px;
+      background: #7c3aed;
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: background 0.2s;
+    }
+    #load-btn:hover:not(:disabled) { background: #6d28d9; }
+    #load-btn:disabled { background: #4b5563; cursor: not-allowed; }
+
+    #status-bar {
+      padding: 8px 20px;
+      background: #131520;
+      font-size: 0.78rem;
+      color: #94a3b8;
+      min-height: 34px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    #progress-wrap {
+      flex: 1;
+      background: #1e2235;
+      border-radius: 99px;
+      height: 6px;
+      overflow: hidden;
+      display: none;
+    }
+    #progress-bar {
+      height: 100%;
+      background: linear-gradient(90deg, #7c3aed, #a78bfa);
+      border-radius: 99px;
+      width: 0%;
+      transition: width 0.3s;
+    }
+
+    #chat-window {
+      flex: 1;
+      overflow-y: auto;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .msg {
+      max-width: 75%;
+      padding: 12px 16px;
+      border-radius: 14px;
+      line-height: 1.6;
+      font-size: 0.92rem;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+    .msg.user {
+      align-self: flex-end;
+      background: #7c3aed;
+      color: #fff;
+      border-bottom-right-radius: 4px;
+    }
+    .msg.assistant {
+      align-self: flex-start;
+      background: #1e2235;
+      color: #e2e8f0;
+      border-bottom-left-radius: 4px;
+    }
+    .msg.assistant.streaming::after {
+      content: "▍";
+      display: inline-block;
+      animation: blink 0.8s step-start infinite;
+      margin-left: 2px;
+    }
+    @keyframes blink { 50% { opacity: 0; } }
+
+    .msg-label {
+      font-size: 0.7rem;
+      color: #64748b;
+      margin-bottom: 3px;
+    }
+    .msg-wrap { display: flex; flex-direction: column; }
+    .msg-wrap.user { align-items: flex-end; }
+    .msg-wrap.assistant { align-items: flex-start; }
+
+    #input-area {
+      padding: 14px 20px;
+      background: #1a1d27;
+      border-top: 1px solid #2d3148;
+      display: flex;
+      gap: 10px;
+      align-items: flex-end;
+    }
+
+    #user-input {
+      flex: 1;
+      background: #252836;
+      color: #e2e8f0;
+      border: 1px solid #3d4265;
+      border-radius: 10px;
+      padding: 10px 14px;
+      font-size: 0.92rem;
+      resize: none;
+      max-height: 140px;
+      line-height: 1.5;
+      font-family: inherit;
+    }
+    #user-input:focus { outline: none; border-color: #7c3aed; }
+    #user-input::placeholder { color: #4b5563; }
+
+    #send-btn {
+      padding: 10px 18px;
+      background: #7c3aed;
+      color: #fff;
+      border: none;
+      border-radius: 10px;
+      font-size: 0.92rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.2s;
+      flex-shrink: 0;
+      height: 42px;
+    }
+    #send-btn:hover:not(:disabled) { background: #6d28d9; }
+    #send-btn:disabled { background: #4b5563; cursor: not-allowed; }
+
+    .empty-state {
+      margin: auto;
+      text-align: center;
+      color: #4b5563;
+    }
+    .empty-state svg { margin-bottom: 12px; opacity: 0.4; }
+    .empty-state p { font-size: 0.9rem; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>⚡ WebLLM Chat</h1>
+    <select id="model-select" aria-label="Select model"></select>
+    <button id="load-btn">Load Model</button>
+  </header>
+
+  <div id="status-bar">
+    <span id="status-text">Select a model and click Load Model to begin.</span>
+    <div id="progress-wrap"><div id="progress-bar"></div></div>
+  </div>
+
+  <div id="chat-window">
+    <div class="empty-state" id="empty-state">
+      <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+      </svg>
+      <p>Load a model to start chatting</p>
+    </div>
+  </div>
+
+  <div id="input-area">
+    <textarea id="user-input" rows="1" placeholder="Type a message…" disabled></textarea>
+    <button id="send-btn" disabled>Send</button>
+  </div>
+
+  <script type="module">
+    import * as webllm from "https://esm.run/@mlc-ai/web-llm";
+
+    const modelSelect  = document.getElementById("model-select");
+    const loadBtn      = document.getElementById("load-btn");
+    const statusText   = document.getElementById("status-text");
+    const progressWrap = document.getElementById("progress-wrap");
+    const progressBar  = document.getElementById("progress-bar");
+    const chatWindow   = document.getElementById("chat-window");
+    const emptyState   = document.getElementById("empty-state");
+    const userInput    = document.getElementById("user-input");
+    const sendBtn      = document.getElementById("send-btn");
+
+    // Populate model dropdown from WebLLM's built-in model list
+    const models = webllm.prebuiltAppConfig.model_list;
+    models.forEach(m => {
+      const opt = document.createElement("option");
+      opt.value = m.model_id;
+      opt.textContent = m.model_id;
+      modelSelect.appendChild(opt);
+    });
+    // Default to a small, fast model if available
+    const preferred = ["Llama-3.2-1B-Instruct-q4f16_1-MLC", "SmolLM2-360M-Instruct-q0f16-MLC", "TinyLlama-1.1B-Chat-v1.0-q4f16_1-MLC"];
+    for (const p of preferred) {
+      const found = [...modelSelect.options].find(o => o.value === p);
+      if (found) { modelSelect.value = p; break; }
+    }
+
+    let engine = null;
+    const history = []; // {role, content}[]
+
+    // Auto-resize textarea
+    userInput.addEventListener("input", () => {
+      userInput.style.height = "auto";
+      userInput.style.height = Math.min(userInput.scrollHeight, 140) + "px";
+    });
+
+    // Load model
+    loadBtn.addEventListener("click", async () => {
+      const modelId = modelSelect.value;
+      if (!modelId) return;
+
+      loadBtn.disabled = true;
+      modelSelect.disabled = true;
+      userInput.disabled = true;
+      sendBtn.disabled = true;
+      history.length = 0;
+      clearChat();
+
+      statusText.textContent = `Loading ${modelId}…`;
+      progressWrap.style.display = "block";
+      progressBar.style.width = "0%";
+
+      try {
+        engine = await webllm.CreateMLCEngine(modelId, {
+          initProgressCallback: (p) => {
+            statusText.textContent = p.text ?? `Loading… ${Math.round((p.progress ?? 0) * 100)}%`;
+            progressBar.style.width = Math.round((p.progress ?? 0) * 100) + "%";
+          }
+        });
+
+        progressBar.style.width = "100%";
+        statusText.textContent = `✓ ${modelId} loaded — start chatting!`;
+        progressWrap.style.display = "none";
+        userInput.disabled = false;
+        sendBtn.disabled = false;
+        modelSelect.disabled = false;
+        loadBtn.disabled = false;
+        loadBtn.textContent = "Reload";
+        userInput.focus();
+      } catch (err) {
+        statusText.textContent = `Error: ${err.message}`;
+        progressWrap.style.display = "none";
+        loadBtn.disabled = false;
+        modelSelect.disabled = false;
+        console.error(err);
+      }
+    });
+
+    // Send message
+    async function sendMessage() {
+      const text = userInput.value.trim();
+      if (!text || !engine) return;
+
+      userInput.value = "";
+      userInput.style.height = "auto";
+      sendBtn.disabled = true;
+      userInput.disabled = true;
+      emptyState.style.display = "none";
+
+      appendMessage("user", text);
+      history.push({ role: "user", content: text });
+
+      const assistantDiv = appendMessage("assistant", "", true);
+
+      try {
+        const chunks = await engine.chat.completions.create({
+          messages: [
+            { role: "system", content: "You are a helpful AI assistant." },
+            ...history
+          ],
+          stream: true,
+          temperature: 0.7,
+        });
+
+        let reply = "";
+        for await (const chunk of chunks) {
+          const delta = chunk.choices[0]?.delta?.content ?? "";
+          reply += delta;
+          assistantDiv.textContent = reply;
+          chatWindow.scrollTop = chatWindow.scrollHeight;
+        }
+
+        assistantDiv.classList.remove("streaming");
+        history.push({ role: "assistant", content: reply });
+      } catch (err) {
+        assistantDiv.classList.remove("streaming");
+        assistantDiv.textContent = `Error: ${err.message}`;
+        console.error(err);
+      }
+
+      sendBtn.disabled = false;
+      userInput.disabled = false;
+      userInput.focus();
+    }
+
+    sendBtn.addEventListener("click", sendMessage);
+    userInput.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendMessage(); }
+    });
+
+    function appendMessage(role, text, streaming = false) {
+      const wrap = document.createElement("div");
+      wrap.className = `msg-wrap ${role}`;
+
+      const label = document.createElement("div");
+      label.className = "msg-label";
+      label.textContent = role === "user" ? "You" : "Assistant";
+
+      const bubble = document.createElement("div");
+      bubble.className = `msg ${role}${streaming ? " streaming" : ""}`;
+      bubble.textContent = text;
+
+      wrap.appendChild(label);
+      wrap.appendChild(bubble);
+      chatWindow.appendChild(wrap);
+      chatWindow.scrollTop = chatWindow.scrollHeight;
+      return bubble;
+    }
+
+    function clearChat() {
+      chatWindow.innerHTML = "";
+      const es = document.createElement("div");
+      es.id = "empty-state";
+      es.className = "empty-state";
+      es.innerHTML = `<svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+      </svg><p>Load a model to start chatting</p>`;
+      chatWindow.appendChild(es);
+    }
+  </script>
+</body>
+</html>
