@@ -201,6 +201,83 @@
     }
     .empty-state svg { margin-bottom: 12px; opacity: 0.4; }
     .empty-state p { font-size: 0.9rem; }
+
+    /* ── Responsive ─────────────────────────────────────────── */
+
+    /* Tablet: wider bubbles, slightly tighter header */
+    @media (max-width: 768px) {
+      .msg { max-width: 85%; }
+      #model-select { min-width: 160px; }
+    }
+
+    /* Mobile: stack header controls, full-width select + button */
+    @media (max-width: 480px) {
+      header {
+        padding: 10px 14px;
+        gap: 8px;
+      }
+
+      header h1 {
+        flex-basis: 100%;
+        font-size: 1rem;
+      }
+
+      #model-select {
+        flex-basis: 100%;
+        min-width: 0;
+        font-size: 0.82rem;
+      }
+
+      #load-btn {
+        width: 100%;
+        padding: 10px;
+        border-radius: 8px;
+      }
+
+      #header-meta {
+        flex-wrap: wrap;
+        gap: 8px;
+        row-gap: 4px;
+      }
+
+      #header-meta > span {
+        width: 100%;
+        font-size: 0.7rem;
+      }
+
+      #status-bar {
+        padding: 6px 14px;
+        font-size: 0.72rem;
+        flex-wrap: wrap;
+      }
+
+      #chat-window {
+        padding: 12px 14px;
+        gap: 10px;
+      }
+
+      .msg {
+        max-width: 92%;
+        font-size: 0.88rem;
+        padding: 10px 13px;
+      }
+
+      #input-area {
+        padding: 10px 14px;
+        gap: 8px;
+      }
+
+      #user-input {
+        font-size: 0.88rem;
+        padding: 9px 12px;
+      }
+
+      #send-btn {
+        padding: 9px 14px;
+        font-size: 0.88rem;
+        height: 40px;
+      }
+    }
   </style>
 </head>
 <body>
