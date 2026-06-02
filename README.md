@@ -1,19 +1,19 @@
 # WebLLM Chat
 
-A simple single-page chat app that runs large language models **entirely in the browser** using [WebLLM](https://webllm.mlc.ai/) and WebGPU — no server, no API keys, no data leaves your device.
+A simple single-page chat app that runs large language models **entirely in the browser** using [WebLLM](https://webllm.mlc.ai/) and WebGPU -- no server, no API keys, no data leaves your device.
 
 ---
 
 ## 🔒 Privacy & Data Sovereignty
 
-> **Your conversations are yours — always.**
+> **Your conversations are yours -- always.**
 
 This app runs inference **100% on your own hardware**, inside your browser. There is no backend, no cloud API, and no telemetry of any kind.
 
 | What happens | Detail |
 |---|---|
 | **Model weights** | Downloaded once from Hugging Face, then cached locally in your browser |
-| **Your prompts** | Never transmitted anywhere — processed entirely on-device |
+| **Your prompts** | Never transmitted anywhere -- processed entirely on-device |
 | **Responses** | Generated locally by your GPU via WebGPU |
 | **Conversation history** | Stored only in memory for the current session; cleared on reload |
 | **Third-party servers** | Zero involvement after the initial model download |
@@ -49,7 +49,7 @@ python3 -m http.server --directory docs
 
 Then:
 1. Pick a model from the dropdown (smaller models load faster)
-2. Click **Load Model** — the model is downloaded and cached on first use
+2. Click **Load Model** -- the model is downloaded and cached on first use
 3. Start chatting
 
 ## Model sizes
@@ -59,4 +59,4 @@ The VRAM column in the dropdown reflects the `vram_required_MB` value from the W
 ## Tech
 
 - [WebLLM](https://github.com/mlc-ai/web-llm) via CDN (`https://esm.run/@mlc-ai/web-llm`)
-- Pure HTML/CSS/JS — no build step
+- Pure HTML/CSS/JS -- no build step
