@@ -471,7 +471,8 @@
 
     // Multi-chat storage
     let currentChatId = null;
-    let allChats = {}; // { chatId: { id, title, messages, createdAt }, ... }
+    let allChats = {};
+    let editingChatId = null;
 
     // Load chats from localStorage
     function loadChatsFromStorage() {
@@ -553,7 +554,9 @@
 
     // Delete a chat
     function deleteChat(chatId) {
+      if (!allChats[chatId]) return;
       delete allChats[chatId];
+      editingChatId = null;
       if (currentChatId === chatId) {
         if (Object.keys(allChats).length > 0) {
           const nextChatId = Object.keys(allChats)[0];
@@ -578,59 +581,65 @@
           const textDiv = document.createElement("div");
           textDiv.className = "chat-item-text";
           textDiv.style.cursor = "pointer";
-          textDiv.innerHTML = `<span class="chat-title">${escapeHtml(chat.title)}</span>`;
-          if (chat.model) {
-            textDiv.innerHTML += `<div class="chat-model">${escapeHtml(chat.model)}</div>`;
-          }
-          textDiv.title = "Double-click to edit title";
           
-          let isEditing = false;
-          textDiv.addEventListener("dblclick", (e) => {
-            e.stopPropagation();
-            if (isEditing) return;
-            isEditing = true;
-            const currentTitle = chat.title;
+          // Check if this chat is being edited
+          if (editingChatId === chat.id) {
             const input = document.createElement("input");
             input.type = "text";
-            input.value = currentTitle;
+            input.value = chat.title;
             input.className = "chat-title-edit";
-            textDiv.innerHTML = "";
             textDiv.appendChild(input);
             input.focus();
             input.select();
             
             const saveTitle = () => {
               const newTitle = input.value.trim();
-              if (newTitle) {
+              if (newTitle && newTitle !== chat.title) {
                 chat.title = newTitle;
                 saveChatsToStorage();
               }
-              isEditing = false;
+              editingChatId = null;
+              renderChatList();
+            };
+            
+            const cancelEdit = () => {
+              editingChatId = null;
               renderChatList();
             };
             
             input.addEventListener("blur", saveTitle);
             input.addEventListener("keydown", (e) => {
+              e.stopPropagation();
               if (e.key === "Enter") saveTitle();
-              if (e.key === "Escape") {
-                isEditing = false;
-                renderChatList();
-              }
+              if (e.key === "Escape") cancelEdit();
             });
-          });
+          } else {
+            textDiv.innerHTML = `<span class="chat-title">${escapeHtml(chat.title)}</span>`;
+            if (chat.model) {
+              textDiv.innerHTML += `<div class="chat-model">${escapeHtml(chat.model)}</div>`;
+            }
+            textDiv.title = "Double-click to edit title";
+            textDiv.addEventListener("dblclick", (e) => {
+              e.stopPropagation();
+              editingChatId = chat.id;
+              renderChatList();
+            });
+          }
           
           const deleteBtn = document.createElement("button");
           deleteBtn.className = "chat-item-delete";
           deleteBtn.innerHTML = '<i class="fas fa-trash-alt"></i>';
           deleteBtn.addEventListener("click", (e) => {
             e.stopPropagation();
-            deleteChat(chat.id);
+            if (confirm(`Delete chat "${chat.title}"?`)) {
+              deleteChat(chat.id);
+            }
           });
           
           chatItem.appendChild(textDiv);
           chatItem.appendChild(deleteBtn);
           chatItem.addEventListener("click", () => {
-            if (!isEditing) switchChat(chat.id);
+            if (editingChatId === null) switchChat(chat.id);
           });
           
           chatList.appendChild(chatItem);
