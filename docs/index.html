@@ -313,6 +313,39 @@
       font-size: 0.88em;
       color: #c4b5fd;
     }
+    .msg pre {
+      background: rgba(0,0,0,0.4);
+      padding: 12px;
+      border-radius: 6px;
+      overflow-x: auto;
+      margin: 8px 0;
+      border-left: 3px solid #7c3aed;
+    }
+    .msg pre code {
+      background: none;
+      padding: 0;
+      color: #e2e8f0;
+      font-size: 0.85em;
+    }
+    .msg h1, .msg h2, .msg h3 {
+      color: #a78bfa;
+      margin-top: 12px;
+      margin-bottom: 6px;
+    }
+    .msg ul {
+      margin: 8px 0;
+      padding-left: 20px;
+    }
+    .msg li {
+      margin: 4px 0;
+    }
+    .msg a {
+      color: #7c3aed;
+      text-decoration: underline;
+    }
+    .msg a:hover {
+      color: #a78bfa;
+    }
     .msg.user {
       align-self: flex-end;
       background: #7c3aed;
@@ -532,7 +565,7 @@
       </div>
 
       <div id="input-area">
-        <button id="upload-icon-btn" class="input-icon-btn" title="Upload a document for RAG"><i class="fas fa-file-upload"></i></button>
+        <button id="upload-icon-btn" class="input-icon-btn" title="Upload a document for RAG" style="border:1px solid; margin-bottom:5px;border-radius:50%"><i class="fas fa-arrow-up"></i></button>
         <textarea id="user-input" rows="1" placeholder="Type a message..." disabled></textarea>
         <button id="send-btn" disabled>Send</button>
       </div>
@@ -941,13 +974,46 @@
     // Parse markdown in messages
     function parseMarkdown(text) {
       const div = document.createElement("div");
+      
+      // First escape HTML
       let html = text
         .replace(/&/g, "&amp;")
         .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;")
-        .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
-        .replace(/\*(.+?)\*/g, "<em>$1</em>")
-        .replace(/`(.+?)`/g, "<code>$1</code>");
+        .replace(/>/g, "&gt;");
+      
+      // Process code blocks first (``` ... ```)
+      html = html.replace(/```([\s\S]*?)```/g, "<pre><code>$1</code></pre>");
+      
+      // Process headings (# ## ###)
+      html = html.replace(/^### (.+)$/gm, "<h3 style='margin:12px 0 4px;font-size:0.95rem;font-weight:600;'>$1</h3>");
+      html = html.replace(/^## (.+)$/gm, "<h2 style='margin:14px 0 6px;font-size:1rem;font-weight:600;'>$1</h2>");
+      html = html.replace(/^# (.+)$/gm, "<h1 style='margin:16px 0 8px;font-size:1.05rem;font-weight:700;'>$1</h1>");
+      
+      // Process links [text](url)
+      html = html.replace(/\[(.+?)\]\((https?:\/\/[^\)]+)\)/g, "<a href='$2' target='_blank' style='color:#7c3aed;text-decoration:underline;'>$1</a>");
+      
+      // Process bold (**text**)
+      html = html.replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>");
+      
+      // Process italic (*text* but not if it's part of bold)
+      html = html.replace(/(?<!\*)\*([^*]+?)\*(?!\*)/g, "<em>$1</em>");
+      
+      // Process inline code (`code`)
+      html = html.replace(/`([^`]+?)`/g, "<code>$1</code>");
+      
+      // Process unordered lists (- item or * item)
+      html = html.replace(/^[\s]*[\-\*] (.+)$/gm, "<li>$1</li>");
+      html = html.replace(/(<li>.*?<\/li>)/s, "<ul style='margin:8px 0;padding-left:20px;'>$1</ul>");
+      
+      // Process line breaks (double newline = paragraph)
+      html = html.replace(/\n\n+/g, "</p><p>");
+      html = "<p>" + html + "</p>";
+      
+      // Clean up multiple p tags
+      html = html.replace(/<p><\/p>/g, "");
+      html = html.replace(/<p>(<pre>|<h|<ul>)/g, "$1");
+      html = html.replace(/(<\/pre>|<\/h\d>|<\/ul>)<\/p>/g, "$1");
+      
       div.innerHTML = html;
       return div;
     }

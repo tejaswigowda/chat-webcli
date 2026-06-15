@@ -18,11 +18,17 @@ First in the webCLI family of zero-egress, offline-first browser tools, alongsid
 
 ✔ **Streaming Responses** – Token-by-token output as the model generates
 
+✔ **Rich Markdown Rendering** – Assistant responses support headings, bold, italic, code blocks, lists, and links
+
+✔ **Model Labels** – Each assistant response shows which model generated it
+
 ✔ **Multi-Chat Support** – Create multiple conversations, all stored locally with full history
 
 ✔ **Chat Management** – Edit chat titles, view which model was used in each conversation
 
 ✔ **Local RAG** – Upload documents (TXT, PDF) per chat; LLM uses relevant context when answering
+
+✔ **Document Tracking** – Uploaded files appear as clickable chat messages with removal option
 
 ✔ **Local Data Persistence** – All conversations and history automatically saved to browser storage
 
@@ -68,6 +74,41 @@ Chat webCLI handles conversations for free, with prompts and responses that neve
 - **Remove Document** – Click the ✕ button on the document indicator to unload it from the current chat
 
 All conversation data and uploaded documents are automatically saved to your browser's local storage and persist across sessions.
+
+---
+
+## Markdown Formatting
+
+Assistant responses support rich markdown formatting for better readability:
+
+- **Bold** – Use `**bold text**` or `__bold text__`
+- **Italic** – Use `*italic text*` or `_italic text_`
+- **Inline Code** – Use `` `code` `` for highlighting
+- **Code Blocks** – Use triple backticks with optional language hint:
+  ```
+  ```python
+  def hello():
+      return "world"
+  ```
+  ```
+- **Headings** – Use `#`, `##`, `###` for h1, h2, h3
+- **Lists** – Use `-` or `*` for unordered lists
+- **Links** – Use `[text](https://url)` format
+
+Example response with formatting:
+```
+# Title
+This is **bold** and this is *italic*.
+
+- List item 1
+- List item 2
+
+[Link text](https://example.com)
+
+`code`
+```
+
+---
 
 ## Requirements
 
