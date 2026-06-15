@@ -203,6 +203,20 @@
       transition: background 0.2s;
     }
     #load-btn:hover:not(:disabled) { background: #6d28d9; }
+
+    #upload-btn {
+      padding: 8px 18px;
+      background: #10b981;
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: background 0.2s;
+    }
+    #upload-btn:hover { background: #059669; }
     #load-btn:disabled { background: #4b5563; cursor: not-allowed; }
 
     #status-bar {
@@ -239,6 +253,44 @@
       display: flex;
       flex-direction: column;
       gap: 14px;
+      transition: background-color 0.2s;
+    }
+
+    #chat-window.drag-over {
+      background-color: rgba(124, 58, 237, 0.1);
+      border: 2px dashed #7c3aed;
+    }
+
+    .doc-info {
+      background: #1a1d27;
+      border: 1px solid #2d3148;
+      border-radius: 8px;
+      padding: 12px 16px;
+      font-size: 0.9rem;
+      color: #a0aec0;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .doc-info-text {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .doc-info-remove {
+      background: none;
+      border: none;
+      color: #ff6b6b;
+      cursor: pointer;
+      padding: 4px 8px;
+      border-radius: 4px;
+      transition: background 0.2s;
+    }
+
+    .doc-info-remove:hover {
+      background: rgba(255, 107, 107, 0.1);
     }
 
     .msg {
@@ -408,6 +460,8 @@
     <h1><i class="fas fa-comments"></i> Chat webCLI</h1>
     <select id="model-select" aria-label="Select model"></select>
     <button id="load-btn">Load Model</button>
+    <button id="upload-btn" title="Upload a document for RAG"><i class="fas fa-file-upload"></i> Upload Document</button>
+    <input type="file" id="file-input" accept=".txt,.pdf" style="display:none;">
     <div id="header-meta">
       <span>
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:-2px;margin-right:3px">
@@ -459,6 +513,8 @@
 
     const modelSelect  = document.getElementById("model-select");
     const loadBtn      = document.getElementById("load-btn");
+    const uploadBtn    = document.getElementById("upload-btn");
+    const fileInput    = document.getElementById("file-input");
     const statusText   = document.getElementById("status-text");
     const progressWrap = document.getElementById("progress-wrap");
     const progressBar  = document.getElementById("progress-bar");
@@ -652,6 +708,111 @@
       return div.innerHTML;
     }
 
+    // ──── Document RAG Functions ────
+
+    function getDocumentChunks() {
+      if (!allChats[currentChatId] || !allChats[currentChatId].docChunks) {
+        return [];
+      }
+      return allChats[currentChatId].docChunks;
+    }
+
+    function scoreRelevance(query, text) {
+      const queryWords = query.toLowerCase().split(/\s+/).filter(w => w.length > 2);
+      const textWords = text.toLowerCase().split(/\s+/);
+      let score = 0;
+      queryWords.forEach(word => {
+        textWords.forEach(tword => {
+          if (tword.includes(word) || word.includes(tword)) score++;
+        });
+      });
+      return score;
+    }
+
+    function retrieveRelevantContext(query, maxChunks = 3) {
+      const chunks = getDocumentChunks();
+      if (chunks.length === 0) return "";
+      
+      const scored = chunks.map(chunk => ({
+        text: chunk,
+        score: scoreRelevance(query, chunk)
+      })).filter(c => c.score > 0).sort((a, b) => b.score - a.score);
+      
+      const relevant = scored.slice(0, maxChunks).map(c => c.text).join("\n\n");
+      return relevant ? `\n\n[Context from document]\n${relevant}` : "";
+    }
+
+    function displayDocumentInfo() {
+      const chunks = getDocumentChunks();
+      if (chunks.length === 0) return;
+      
+      const existing = chatWindow.querySelector(".doc-info");
+      if (existing) existing.remove();
+      
+      const info = document.createElement("div");
+      info.className = "doc-info";
+      info.innerHTML = `
+        <div class="doc-info-text">
+          <i class="fas fa-file-alt"></i>
+          <span>${chunks.length} chunks loaded</span>
+        </div>
+        <button class="doc-info-remove" onclick="removeChatDocument()">
+          <i class="fas fa-times"></i>
+        </button>
+      `;
+      chatWindow.insertBefore(info, chatWindow.firstChild);
+    }
+
+    function removeChatDocument() {
+      if (allChats[currentChatId]) {
+        delete allChats[currentChatId].docChunks;
+        delete allChats[currentChatId].docName;
+        saveChatsToStorage();
+        renderChatList();
+        const docInfo = chatWindow.querySelector(".doc-info");
+        if (docInfo) docInfo.remove();
+      }
+    }
+
+    function parseAndStoreDocument(text, fileName) {
+      const chunkSize = 500;
+      const chunks = [];
+      for (let i = 0; i < text.length; i += chunkSize) {
+        chunks.push(text.substring(i, i + chunkSize));
+      }
+      
+      if (allChats[currentChatId]) {
+        allChats[currentChatId].docChunks = chunks;
+        allChats[currentChatId].docName = fileName;
+        saveChatsToStorage();
+        displayDocumentInfo();
+        statusText.textContent = `Loaded ${fileName} (${chunks.length} chunks)`;
+      }
+    }
+
+    function handleFileUpload(file) {
+      if (!file) return;
+      
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        try {
+          let text = e.target.result;
+          parseAndStoreDocument(text, file.name);
+        } catch (err) {
+          statusText.textContent = `Error loading file: ${err.message}`;
+        }
+      };
+      reader.onerror = () => {
+        statusText.textContent = "Error reading file";
+      };
+      
+      if (file.type === "application/pdf") {
+        statusText.textContent = "PDF support coming soon - use .txt files for now";
+      } else {
+        reader.readAsText(file);
+      }
+    }
+
     // Populate model dropdown from WebLLM's built-in model list
     const models = webllm.prebuiltAppConfig.model_list;
     function fmtVram(mb) {
@@ -780,9 +941,13 @@
       const assistantDiv = appendMessage("assistant", "", true);
 
       try {
+        // Get RAG context if documents are loaded
+        const ragContext = retrieveRelevantContext(text);
+        const systemPrompt = `You are a helpful AI assistant.${ragContext ? ragContext : ""}`;
+
         const chunks = await engine.chat.completions.create({
           messages: [
-            { role: "system", content: "You are a helpful AI assistant." },
+            { role: "system", content: systemPrompt },
             ...history
           ],
           stream: true,
@@ -817,6 +982,33 @@
     sendBtn.addEventListener("click", sendMessage);
     userInput.addEventListener("keydown", (e) => {
       if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendMessage(); }
+    });
+
+    // File upload and drag-drop
+    uploadBtn.addEventListener("click", () => fileInput.click());
+    fileInput.addEventListener("change", (e) => {
+      if (e.target.files[0]) handleFileUpload(e.target.files[0]);
+      e.target.value = "";
+    });
+
+    // Drag-drop handlers
+    chatWindow.addEventListener("dragover", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      chatWindow.classList.add("drag-over");
+    });
+
+    chatWindow.addEventListener("dragleave", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      chatWindow.classList.remove("drag-over");
+    });
+
+    chatWindow.addEventListener("drop", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      chatWindow.classList.remove("drag-over");
+      if (e.dataTransfer.files[0]) handleFileUpload(e.dataTransfer.files[0]);
     });
 
     // Multi-chat event listeners
