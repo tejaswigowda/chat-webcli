@@ -10,6 +10,10 @@ First in the webCLI family of zero-egress, offline-first browser tools, alongsid
 
 ## Key Features
 
+✔ **Offline-First** – Everything runs locally; no cloud dependency
+
+✔ **100% Local** – All data, models, and inference stay on your device
+
 ✔ **No Server Uploads** – All inference happens entirely on your device
 
 ✔ **Dropdown of WebLLM Models** – 30+ models with VRAM requirements shown
