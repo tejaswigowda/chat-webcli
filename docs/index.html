@@ -782,7 +782,8 @@
       
       const textDiv = document.createElement("div");
       textDiv.className = "doc-info-text";
-      textDiv.innerHTML = `<i class="fas fa-file-alt"></i><span>${chunks.length} chunks loaded</span>`;
+      const docName = allChats[currentChatId]?.docName || "Document";
+      textDiv.innerHTML = `<i class="fas fa-file-alt"></i><span><strong>${docName}</strong> (${chunks.length} chunks)</span>`;
       
       const removeBtn = document.createElement("button");
       removeBtn.className = "doc-info-remove";
