@@ -3,7 +3,8 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>WebLLM Chat</title>
+  <title>Chat webCLI</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -123,6 +124,17 @@
       font-size: 0.92rem;
       white-space: pre-wrap;
       word-break: break-word;
+      overflow-wrap: break-word;
+    }
+    .msg strong { color: #fff; font-weight: 700; }
+    .msg em { font-style: italic; color: #b4a7ff; }
+    .msg code {
+      background: rgba(0,0,0,0.3);
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-family: 'Monaco', 'Courier New', monospace;
+      font-size: 0.88em;
+      color: #c4b5fd;
     }
     .msg.user {
       align-self: flex-end;
@@ -149,6 +161,9 @@
       color: #64748b;
       margin-bottom: 3px;
     }
+      flex-wrap: wrap;
+    }
+
     .msg-wrap { display: flex; flex-direction: column; }
     .msg-wrap.user { align-items: flex-end; }
     .msg-wrap.assistant { align-items: flex-start; }
@@ -282,7 +297,7 @@
 </head>
 <body>
   <header>
-    <h1>⚡ WebLLM Chat</h1>
+    <h1><i class="fas fa-comments"></i> Chat webCLI</h1>
     <select id="model-select" aria-label="Select model"></select>
     <button id="load-btn">Load Model</button>
     <div id="header-meta">
@@ -290,19 +305,13 @@
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:-2px;margin-right:3px">
           <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>
         </svg>
-        Runs 100% locally -- your data never leaves this device
+        All inference on your device - your conversations never leave
       </span>
-      <a href="https://github.com/mlc-ai/web-llm" target="_blank" rel="noopener">
+      <a href="https://github.com/tejaswigowda/chat-webCLI" target="_blank" rel="noopener">
         <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor">
           <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0 0 24 12c0-6.63-5.37-12-12-12z"/>
         </svg>
-        mlc-ai/web-llm
-      </a>
-      <a href="https://github.com/tejaswigowda/webllm-eg" target="_blank" rel="noopener">
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor">
-          <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0 0 24 12c0-6.63-5.37-12-12-12z"/>
-        </svg>
-        tejaswigowda/webllm-eg
+        tejaswigowda/chat-webCLI
       </a>
     </div>
   </header>
@@ -322,7 +331,7 @@
   </div>
 
   <div id="input-area">
-    <textarea id="user-input" rows="1" placeholder="Type a message…" disabled></textarea>
+    <textarea id="user-input" rows="1" placeholder="Type a message..." disabled></textarea>
     <button id="send-btn" disabled>Send</button>
   </div>
 
@@ -367,6 +376,34 @@
       userInput.style.height = "auto";
       userInput.style.height = Math.min(userInput.scrollHeight, 140) + "px";
     });
+
+    // Rich text formatting
+    function insertMarkdown(before, after) {
+      const start = userInput.selectionStart;
+      const end = userInput.selectionEnd;
+      const text = userInput.value;
+      const selected = text.substring(start, end) || "text";
+      const newText = text.substring(0, start) + before + selected + after + text.substring(end);
+      userInput.value = newText;
+      userInput.selectionStart = start + before.length;
+      userInput.selectionEnd = start + before.length + selected.length;
+      userInput.focus();
+      userInput.dispatchEvent(new Event('input'));
+    }
+
+    // Parse markdown in messages
+    function parseMarkdown(text) {
+      const div = document.createElement("div");
+      let html = text
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
+        .replace(/\*(.+?)\*/g, "<em>$1</em>")
+        .replace(/`(.+?)`/g, "<code>$1</code>");
+      div.innerHTML = html;
+      return div;
+    }
 
     // Load model
     loadBtn.addEventListener("click", async () => {
@@ -445,6 +482,9 @@
         }
 
         assistantDiv.classList.remove("streaming");
+        // Parse markdown after streaming completes
+        assistantDiv.innerHTML = "";
+        assistantDiv.appendChild(parseMarkdown(reply));
         history.push({ role: "assistant", content: reply });
       } catch (err) {
         assistantDiv.classList.remove("streaming");
@@ -472,7 +512,16 @@
 
       const bubble = document.createElement("div");
       bubble.className = `msg ${role}${streaming ? " streaming" : ""}`;
-      bubble.textContent = text;
+      if (streaming) {
+        bubble.textContent = text;
+      } else if (text) {
+        // Only parse markdown for assistant messages
+        if (role === "assistant") {
+          bubble.appendChild(parseMarkdown(text));
+        } else {
+          bubble.textContent = text;
+        }
+      }
 
       wrap.appendChild(label);
       wrap.appendChild(bubble);
