@@ -17,6 +17,94 @@
       flex-direction: column;
     }
 
+    #container {
+      display: flex;
+      flex: 1;
+      overflow: hidden;
+    }
+
+    #sidebar {
+      width: 250px;
+      background: #0d1117;
+      border-right: 1px solid #2d3148;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    #sidebar-header {
+      padding: 12px 14px;
+      border-bottom: 1px solid #2d3148;
+      display: flex;
+      gap: 8px;
+    }
+
+    #new-chat-btn {
+      flex: 1;
+      padding: 8px 12px;
+      background: #7c3aed;
+      color: #fff;
+      border: none;
+      border-radius: 6px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    #new-chat-btn:hover { background: #6d28d9; }
+
+    #chat-list {
+      flex: 1;
+      overflow-y: auto;
+      padding: 8px;
+    }
+
+    .chat-item {
+      padding: 10px 12px;
+      margin-bottom: 4px;
+      background: #1a1d27;
+      border: 1px solid #2d3148;
+      border-radius: 6px;
+      font-size: 0.85rem;
+      cursor: pointer;
+      transition: all 0.2s;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+      overflow: hidden;
+    }
+
+    .chat-item:hover { background: #252836; border-color: #3d4265; }
+    .chat-item.active { background: #7c3aed; border-color: #7c3aed; }
+
+    .chat-item-text {
+      flex: 1;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      font-size: 0.8rem;
+    }
+
+    .chat-item-delete {
+      background: none;
+      border: none;
+      color: #64748b;
+      cursor: pointer;
+      padding: 2px 4px;
+      font-size: 0.8rem;
+      transition: color 0.2s;
+      flex-shrink: 0;
+    }
+    .chat-item-delete:hover { color: #ff6b6b; }
+
+    #main-area {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
     header {
       padding: 14px 20px;
       background: #1a1d27;
@@ -228,23 +316,6 @@
     /* Mobile: stack header controls, full-width select + button */
     @media (max-width: 600px) {
       header {
-        padding: 10px 14px;
-        gap: 8px;
-      }
-
-      header h1 {
-        flex-basis: 100%;
-        font-size: 1rem;
-      }
-
-      #model-select {
-        flex-basis: 100%;
-        min-width: 0;
-        font-size: 0.82rem;
-      }
-
-      #load-btn {
-        width: 100%;
         padding: 10px;
         border-radius: 8px;
       }
@@ -316,23 +387,34 @@
     </div>
   </header>
 
-  <div id="status-bar">
-    <span id="status-text">Select a model and click Load Model to begin.</span>
-    <div id="progress-wrap"><div id="progress-bar"></div></div>
-  </div>
-
-  <div id="chat-window">
-    <div class="empty-state" id="empty-state">
-      <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
-      </svg>
-      <p>Load a model to start chatting</p>
+  <div id="container">
+    <div id="sidebar">
+      <div id="sidebar-header">
+        <button id="new-chat-btn"><i class="fas fa-plus"></i> New Chat</button>
+      </div>
+      <div id="chat-list"></div>
     </div>
-  </div>
 
-  <div id="input-area">
-    <textarea id="user-input" rows="1" placeholder="Type a message..." disabled></textarea>
-    <button id="send-btn" disabled>Send</button>
+    <div id="main-area">
+      <div id="status-bar">
+        <span id="status-text">Select a model and click Load Model to begin.</span>
+        <div id="progress-wrap"><div id="progress-bar"></div></div>
+      </div>
+
+      <div id="chat-window">
+        <div class="empty-state" id="empty-state">
+          <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+          </svg>
+          <p>Load a model to start chatting</p>
+        </div>
+      </div>
+
+      <div id="input-area">
+        <textarea id="user-input" rows="1" placeholder="Type a message..." disabled></textarea>
+        <button id="send-btn" disabled>Send</button>
+      </div>
+    </div>
   </div>
 
   <script type="module">
@@ -347,6 +429,133 @@
     const emptyState   = document.getElementById("empty-state");
     const userInput    = document.getElementById("user-input");
     const sendBtn      = document.getElementById("send-btn");
+    const newChatBtn   = document.getElementById("new-chat-btn");
+    const chatList     = document.getElementById("chat-list");
+
+    // Multi-chat storage
+    let currentChatId = null;
+    let allChats = {}; // { chatId: { id, title, messages, createdAt }, ... }
+
+    // Load chats from localStorage
+    function loadChatsFromStorage() {
+      const stored = localStorage.getItem("chat-webCLI-chats");
+      if (stored) {
+        allChats = JSON.parse(stored);
+        if (Object.keys(allChats).length > 0 && !currentChatId) {
+          const firstChatId = Object.keys(allChats)[0];
+          switchChat(firstChatId);
+        }
+      } else {
+        createNewChat();
+      }
+      renderChatList();
+    }
+
+    // Save chats to localStorage
+    function saveChatsToStorage() {
+      localStorage.setItem("chat-webCLI-chats", JSON.stringify(allChats));
+    }
+
+    // Create a new chat
+    function createNewChat() {
+      const chatId = Date.now().toString();
+      const title = `Chat ${new Date().toLocaleTimeString()}`;
+      allChats[chatId] = {
+        id: chatId,
+        title: title,
+        messages: [],
+        createdAt: new Date().toISOString()
+      };
+      currentChatId = chatId;
+      saveChatsToStorage();
+      renderChatList();
+      loadCurrentChat();
+    }
+
+    // Switch to a different chat
+    function switchChat(chatId) {
+      if (allChats[chatId]) {
+        currentChatId = chatId;
+        loadCurrentChat();
+        renderChatList();
+      }
+    }
+
+    // Load messages from current chat into history and UI
+    function loadCurrentChat() {
+      if (!currentChatId || !allChats[currentChatId]) return;
+      const chat = allChats[currentChatId];
+      history.length = 0;
+      chatWindow.innerHTML = "";
+      
+      // Restore messages to history array
+      history.push(...chat.messages);
+      
+      // Render messages in UI
+      if (chat.messages.length === 0) {
+        emptyState.style.display = "flex";
+      } else {
+        emptyState.style.display = "none";
+        chat.messages.forEach(msg => {
+          appendMessage(msg.role, msg.content, false);
+        });
+      }
+    }
+
+    // Save current chat to storage
+    function saveCurrentChat() {
+      if (!currentChatId || !allChats[currentChatId]) return;
+      allChats[currentChatId].messages = history.map(msg => ({
+        role: msg.role,
+        content: msg.content
+      }));
+      saveChatsToStorage();
+    }
+
+    // Delete a chat
+    function deleteChat(chatId) {
+      delete allChats[chatId];
+      if (currentChatId === chatId) {
+        if (Object.keys(allChats).length > 0) {
+          const nextChatId = Object.keys(allChats)[0];
+          switchChat(nextChatId);
+        } else {
+          createNewChat();
+        }
+      }
+      saveChatsToStorage();
+      renderChatList();
+    }
+
+    // Render chat list sidebar
+    function renderChatList() {
+      chatList.innerHTML = "";
+      Object.values(allChats)
+        .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+        .forEach(chat => {
+          const chatItem = document.createElement("div");
+          chatItem.className = `chat-item ${chat.id === currentChatId ? "active" : ""}`;
+          
+          const textDiv = document.createElement("div");
+          textDiv.className = "chat-item-text";
+          textDiv.textContent = chat.title;
+          textDiv.title = chat.title;
+          
+          const deleteBtn = document.createElement("button");
+          deleteBtn.className = "chat-item-delete";
+          deleteBtn.innerHTML = '<i class="fas fa-trash-alt"></i>';
+          deleteBtn.addEventListener("click", (e) => {
+            e.stopPropagation();
+            deleteChat(chat.id);
+          });
+          
+          chatItem.appendChild(textDiv);
+          chatItem.appendChild(deleteBtn);
+          chatItem.addEventListener("click", () => switchChat(chat.id));
+          
+          chatList.appendChild(chatItem);
+        });
+    }
 
     // Populate model dropdown from WebLLM's built-in model list
     const models = webllm.prebuiltAppConfig.model_list;
@@ -460,6 +669,7 @@
 
       appendMessage("user", text);
       history.push({ role: "user", content: text });
+      saveCurrentChat();
 
       const assistantDiv = appendMessage("assistant", "", true);
 
@@ -486,6 +696,7 @@
         assistantDiv.innerHTML = "";
         assistantDiv.appendChild(parseMarkdown(reply));
         history.push({ role: "assistant", content: reply });
+        saveCurrentChat();
       } catch (err) {
         assistantDiv.classList.remove("streaming");
         assistantDiv.textContent = `Error: ${err.message}`;
@@ -501,6 +712,12 @@
     userInput.addEventListener("keydown", (e) => {
       if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendMessage(); }
     });
+
+    // Multi-chat event listeners
+    newChatBtn.addEventListener("click", createNewChat);
+
+    // Initialize chats on load
+    loadChatsFromStorage();
 
     function appendMessage(role, text, streaming = false) {
       const wrap = document.createElement("div");
