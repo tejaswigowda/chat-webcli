@@ -22,6 +22,8 @@ First in the webCLI family of zero-egress, offline-first browser tools, alongsid
 
 ✔ **Chat Management** – Edit chat titles, view which model was used in each conversation
 
+✔ **Local RAG** – Upload documents (TXT, PDF) per chat; LLM uses relevant context when answering
+
 ✔ **Local Data Persistence** – All conversations and history automatically saved to browser storage
 
 ✔ **Offline-First PWA** – Works completely offline after first use; install as a native app
@@ -58,7 +60,14 @@ Chat webCLI handles conversations for free, with prompts and responses that neve
 7. **View Chat Details** – Each chat shows the model used below its title in the sidebar
 8. **Delete Conversations** – Click the trash icon next to a chat to remove it
 
-All conversation data is automatically saved to your browser's local storage and persists across sessions.
+**Document Upload & RAG:**
+- **Upload Documents** – Click **Upload Document** button or drag a file onto the chat window
+- **Supported Formats** – `.txt` (plain text) and `.pdf` (PDF files)
+- **Per-Chat Documents** – Each chat can have its own document; uploading to one chat doesn't affect others
+- **Automatic Context** – When you send a message, the model automatically retrieves relevant chunks from the document
+- **Remove Document** – Click the ✕ button on the document indicator to unload it from the current chat
+
+All conversation data and uploaded documents are automatically saved to your browser's local storage and persist across sessions.
 
 ## Requirements
 
@@ -113,6 +122,32 @@ All conversations are saved locally in your browser and persist across sessions:
 - **No Cloud Sync** – Chats remain on your device only; not synced anywhere
 
 Your chat data is stored in your browser's `localStorage` under the key `chat-webCLI-chats`. You can view, export, or delete it anytime via your browser's developer tools.
+
+---
+
+## Local RAG (Retrieval Augmented Generation)
+
+Use AI to ask questions about your documents - entirely on-device.
+
+- **Upload Documents** - Add `.txt` or `.pdf` files to any chat via the **Upload Document** button or drag-drop
+- **Per-Chat Documents** - Each conversation can have its own document; uploading to one chat doesn't affect others
+- **Automatic Context Injection** - When you ask a question, the model retrieves the 3 most relevant chunks from your document
+- **Keyword Matching** - Context chunks are scored by relevance to your query and the top matches are included
+- **No Server Involved** - All document parsing, chunking, and retrieval happens locally in your browser
+- **Full Privacy** - Documents never leave your device; stored only in localStorage within the chat
+
+**How It Works:**
+1. Upload a document to the chat (TXT or PDF)
+2. File is split into 500-character chunks and stored locally
+3. When you send a message, the app finds the most relevant chunks using keyword matching
+4. The top 3 chunks are appended to your prompt as context for the model
+5. The LLM responds using both your question and the document context
+
+**Example Workflow:**
+- Upload a technical document to chat A
+- Ask questions about it - the model has automatic access to relevant sections
+- Switch to chat B and upload a different document
+- The model in chat B only sees context from its document, not chat A's
 
 ---
 
