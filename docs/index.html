@@ -386,6 +386,23 @@
     #send-btn:hover:not(:disabled) { background: #6d28d9; }
     #send-btn:disabled { background: #4b5563; cursor: not-allowed; }
 
+    .input-icon-btn {
+      background: none;
+      border: none;
+      color: #7c3aed;
+      cursor: pointer;
+      padding: 8px 12px;
+      font-size: 1rem;
+      transition: color 0.2s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .input-icon-btn:hover:not(:disabled) { color: #a78bfa; }
+    .input-icon-btn:disabled { color: #4b5563; cursor: not-allowed; }
+
     .empty-state {
       margin: auto;
       text-align: center;
@@ -503,6 +520,7 @@
       </div>
 
       <div id="input-area">
+        <button id="upload-icon-btn" class="input-icon-btn" title="Upload a document for RAG"><i class="fas fa-file-upload"></i></button>
         <textarea id="user-input" rows="1" placeholder="Type a message..." disabled></textarea>
         <button id="send-btn" disabled>Send</button>
       </div>
@@ -515,6 +533,7 @@
     const modelSelect  = document.getElementById("model-select");
     const loadBtn      = document.getElementById("load-btn");
     const uploadBtn    = document.getElementById("upload-btn");
+    const uploadIconBtn = document.getElementById("upload-icon-btn");
     const fileInput    = document.getElementById("file-input");
     const statusText   = document.getElementById("status-text");
     const progressWrap = document.getElementById("progress-wrap");
@@ -963,6 +982,8 @@
       userInput.value = "";
       userInput.style.height = "auto";
       sendBtn.disabled = true;
+      uploadIconBtn.disabled = true;
+      uploadIconBtn.disabled = true;
       userInput.disabled = true;
       emptyState.style.display = "none";
 
@@ -1018,6 +1039,8 @@
       }
 
       sendBtn.disabled = false;
+      uploadIconBtn.disabled = false;
+      uploadIconBtn.disabled = false;
       userInput.disabled = false;
       userInput.focus();
     }
@@ -1029,6 +1052,7 @@
 
     // File upload and drag-drop
     uploadBtn.addEventListener("click", () => fileInput.click());
+    uploadIconBtn.addEventListener("click", () => fileInput.click());
     fileInput.addEventListener("change", (e) => {
       if (e.target.files[0]) handleFileUpload(e.target.files[0]);
       e.target.value = "";
