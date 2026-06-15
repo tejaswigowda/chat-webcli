@@ -4,7 +4,7 @@ A browser-based LLM chat app that runs large language models **entirely in your 
 
 ► **Live app:** [https://tejaswigowda.com/chat-webCLI/](https://tejaswigowda.com/chat-webCLI/)
 
-First in the webCLI family of zero-egress, offline-first browser tools, alongside [ffmpeg-webCLI](https://github.com/tejaswigowda/ffmpeg-webCLI) and [whisper-webCLI](https://github.com/tejaswigowda/whisper-webCLI). Same look and feel, same privacy promise: your conversations never leave your device.
+Another tool in the webCLI family of zero-egress, offline-first browser tools, alongside [ffmpeg-webCLI](https://github.com/tejaswigowda/ffmpeg-webCLI) and [whisper-webCLI](https://github.com/tejaswigowda/whisper-webCLI). Same look and feel, same privacy promise: your conversations never leave your device.
 
 ---
 
@@ -44,18 +44,19 @@ First in the webCLI family of zero-egress, offline-first browser tools, alongsid
 
 ---
 
-## What It Replaces
+## When to Use This
 
-| Service | What webCLI does instead |
+| Scenario | Why webCLI instead? |
 |---|---|
-| ChatGPT / Claude | Run any WebLLM-compatible model locally in your browser |
-| Copilot | No API keys, no auth, no cloud dependency |
-| Google Bard / Gemini | Conversation stays on your device; model weights cached locally |
-| Hugging Face Chat | Same models, but zero server uploads |
+| **Privacy-sensitive conversations** (medical, legal, financial, personal) | Run models locally; your prompts never reach a server |
+| **No internet / offline work** | Everything runs in your browser after the first model download |
+| **No API keys / auth overhead** | Zero signup, zero rate limits, zero cloud dependency |
+| **Full data control** | Conversations stay in browser storage; you delete them, they're gone |
+| **Cost-free operation** | No per-message charges, no subscription, no telemetry |
 
-The difference that matters: every cloud LLM tool uploads your prompt to a server. Some are free with limits, some charge per message - but all of them see what you write, and all are subject to data breaches, subpoenas, and privacy-policy changes.
+**The tradeoff:** Local models (1–3B parameters) are smaller and slower than cloud models (GPT-4, Claude 3). Use webCLI when privacy matters more than bleeding-edge capability. For tasks requiring state-of-the-art performance, use cloud models. For sensitive conversations, use this.
 
-Chat webCLI handles conversations for free, with prompts and responses that never leave your device.
+**The privacy difference:** Every cloud LLM tool uploads your prompt to a server. Some are free with limits, some charge per message — but all of them see what you write, and all are subject to data breaches, subpoenas, and privacy-policy changes. Chat webCLI handles conversations with zero server uploads and zero data exposure.
 
 ---
 
