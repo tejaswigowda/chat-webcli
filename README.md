@@ -18,7 +18,11 @@ First in the webCLI family of zero-egress, offline-first browser tools, alongsid
 
 ✔ **Streaming Responses** – Token-by-token output as the model generates
 
-✔ **Full Chat History** – Conversation persists for the session; cleared on reload
+✔ **Multi-Chat Support** – Create multiple conversations, all stored locally with full history
+
+✔ **Chat Management** – Edit chat titles, view which model was used in each conversation
+
+✔ **Local Data Persistence** – All conversations and history automatically saved to browser storage
 
 ✔ **Offline-First PWA** – Works completely offline after first use; install as a native app
 
@@ -45,10 +49,16 @@ Chat webCLI handles conversations for free, with prompts and responses that neve
 
 ## Usage
 
-1. **Pick a Model** – Select from the dropdown (smaller models load faster)
-2. **Load Model** – Click Load Model; the model downloads and caches on first use (subsequent loads are instant)
-3. **Start Chatting** – Type your message and press `Enter` (or `Shift+Enter` for a new line)
-4. **Stream Output** – Watch responses generate token-by-token
+1. **Create or Switch Chats** – Click **New Chat** in the sidebar to start a conversation, or click any existing chat to switch to it
+2. **Rename Conversations** – Double-click a chat title to edit it; press Enter to save or Escape to cancel
+3. **Pick a Model** – Select from the dropdown (smaller models load faster)
+4. **Load Model** – Click Load Model; the model downloads and caches on first use (subsequent loads are instant)
+5. **Start Chatting** – Type your message and press `Enter` (or `Shift+Enter` for a new line)
+6. **Stream Output** – Watch responses generate token-by-token
+7. **View Chat Details** – Each chat shows the model used below its title in the sidebar
+8. **Delete Conversations** – Click the trash icon next to a chat to remove it
+
+All conversation data is automatically saved to your browser's local storage and persists across sessions.
 
 ## Requirements
 
@@ -84,10 +94,25 @@ This app runs inference **100% on your own hardware** inside your browser. There
 | **Model weights** | Downloaded once from Hugging Face; cached locally in your browser |
 | **Your prompts** | Never transmitted anywhere - processed entirely on-device |
 | **Responses** | Generated locally by your GPU via WebGPU |
-| **Conversation history** | Stored only in memory for the current session; cleared on reload |
+| **Conversation history** | Stored in browser's localStorage; persists across sessions, you control deletion |
 | **Third-party servers** | Zero involvement after the initial model download |
 
 Because the model runs on your device, you remain in full control of your data. This makes Chat webCLI suitable for sensitive or personal conversations where cloud-based AI assistants are not appropriate.
+
+---
+
+## Chat Management
+
+All conversations are saved locally in your browser and persist across sessions:
+
+- **Create Chats** – Click **New Chat** to start a new conversation anytime
+- **Organize Chats** – Edit chat titles by double-clicking them in the sidebar
+- **Track Models** – Each chat displays which model was used for that conversation
+- **Full History** – All messages in each chat are automatically preserved
+- **Delete Chats** – Click the trash icon to remove any conversation (permanent within your device)
+- **No Cloud Sync** – Chats remain on your device only; not synced anywhere
+
+Your chat data is stored in your browser's `localStorage` under the key `chat-webCLI-chats`. You can view, export, or delete it anytime via your browser's developer tools.
 
 ---
 
