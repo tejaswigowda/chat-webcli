@@ -566,7 +566,7 @@
 
       <div id="input-area">
         <button id="upload-icon-btn" class="input-icon-btn" title="Upload a document for RAG" style="border:1px solid; margin-bottom:5px;border-radius:50%"><i class="fas fa-arrow-up"></i></button>
-        <textarea id="user-input" rows="1" placeholder="Type a message..." disabled></textarea>
+        <textarea id="user-input" rows="1" placeholder="Load model first" disabled></textarea>
         <button id="send-btn" disabled>Send</button>
       </div>
     </div>
@@ -1045,6 +1045,7 @@
         progressBar.style.width = "100%";
         statusText.textContent = `✓ ${modelId} loaded -- start chatting!`;
         progressWrap.style.display = "none";
+        userInput.placeholder = "Type a message...";
         userInput.disabled = false;
         sendBtn.disabled = false;
         modelSelect.disabled = false;
