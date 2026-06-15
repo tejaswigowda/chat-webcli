@@ -98,6 +98,43 @@
     }
     .chat-item-delete:hover { color: #ff6b6b; }
 
+    .chat-item-text {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .chat-title {
+      display: block;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .chat-model {
+      font-size: 0.7rem;
+      color: #7c3aed;
+      margin-top: 2px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .chat-title-edit {
+      width: 100%;
+      background: #1f2937;
+      border: 1px solid #7c3aed;
+      color: #e2e8f0;
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-size: 0.9rem;
+      font-family: inherit;
+    }
+
+    .chat-title-edit:focus {
+      outline: none;
+      border-color: #a78bfa;
+    }
+
     #main-area {
       flex: 1;
       display: flex;
@@ -464,7 +501,9 @@
         id: chatId,
         title: title,
         messages: [],
-        createdAt: new Date().toISOString()
+        createdAt: new Date().toISOString(),
+        model: null,
+        modelsUsed: []
       };
       currentChatId = chatId;
       saveChatsToStorage();
@@ -538,8 +577,47 @@
           
           const textDiv = document.createElement("div");
           textDiv.className = "chat-item-text";
-          textDiv.textContent = chat.title;
-          textDiv.title = chat.title;
+          textDiv.style.cursor = "pointer";
+          textDiv.innerHTML = `<span class="chat-title">${escapeHtml(chat.title)}</span>`;
+          if (chat.model) {
+            textDiv.innerHTML += `<div class="chat-model">${escapeHtml(chat.model)}</div>`;
+          }
+          textDiv.title = "Double-click to edit title";
+          
+          let isEditing = false;
+          textDiv.addEventListener("dblclick", (e) => {
+            e.stopPropagation();
+            if (isEditing) return;
+            isEditing = true;
+            const currentTitle = chat.title;
+            const input = document.createElement("input");
+            input.type = "text";
+            input.value = currentTitle;
+            input.className = "chat-title-edit";
+            textDiv.innerHTML = "";
+            textDiv.appendChild(input);
+            input.focus();
+            input.select();
+            
+            const saveTitle = () => {
+              const newTitle = input.value.trim();
+              if (newTitle) {
+                chat.title = newTitle;
+                saveChatsToStorage();
+              }
+              isEditing = false;
+              renderChatList();
+            };
+            
+            input.addEventListener("blur", saveTitle);
+            input.addEventListener("keydown", (e) => {
+              if (e.key === "Enter") saveTitle();
+              if (e.key === "Escape") {
+                isEditing = false;
+                renderChatList();
+              }
+            });
+          });
           
           const deleteBtn = document.createElement("button");
           deleteBtn.className = "chat-item-delete";
@@ -551,10 +629,18 @@
           
           chatItem.appendChild(textDiv);
           chatItem.appendChild(deleteBtn);
-          chatItem.addEventListener("click", () => switchChat(chat.id));
+          chatItem.addEventListener("click", () => {
+            if (!isEditing) switchChat(chat.id);
+          });
           
           chatList.appendChild(chatItem);
         });
+    }
+    
+    function escapeHtml(text) {
+      const div = document.createElement("div");
+      div.textContent = text;
+      return div.innerHTML;
     }
 
     // Populate model dropdown from WebLLM's built-in model list
@@ -669,7 +755,18 @@
 
       appendMessage("user", text);
       history.push({ role: "user", content: text });
+      
+      // Capture model being used
+      const selectedModel = modelSelect.value;
+      if (selectedModel && allChats[currentChatId]) {
+        allChats[currentChatId].model = selectedModel;
+        if (!allChats[currentChatId].modelsUsed.includes(selectedModel)) {
+          allChats[currentChatId].modelsUsed.push(selectedModel);
+        }
+      }
+      
       saveCurrentChat();
+      renderChatList();
 
       const assistantDiv = appendMessage("assistant", "", true);
 
