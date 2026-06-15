@@ -30,7 +30,7 @@ First in the webCLI family of zero-egress, offline-first browser tools, alongsid
 
 ✔ **Chat Management** – Edit chat titles, view which model was used in each conversation
 
-✔ **Local RAG** – Upload documents (TXT, PDF) per chat; LLM uses relevant context when answering
+✔ **Keyword-Based Document Retrieval** – Upload documents (TXT, PDF) per chat; LLM uses keyword scoring to inject relevant context (no embedding model)
 
 ✔ **Document Tracking** – Uploaded files appear as clickable chat messages with removal option
 
@@ -170,9 +170,9 @@ Your chat data is stored in your browser's `localStorage` under the key `chat-we
 
 ---
 
-## Local RAG (Retrieval Augmented Generation)
+## Keyword-Based Document Retrieval
 
-Use AI to ask questions about your documents - entirely on-device.
+Use AI to ask questions about your documents - entirely on-device. All retrieval uses keyword matching (no embedding models), keeping the app lightweight and fast.
 
 - **Upload Documents** - Add `.txt` or `.pdf` files to any chat via the **Upload Document** button or drag-drop
 - **Per-Chat Documents** - Each conversation can have its own document; uploading to one chat doesn't affect others
