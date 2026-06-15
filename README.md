@@ -149,7 +149,7 @@ This app runs inference **100% on your own hardware** inside your browser. There
 | **Model weights** | Downloaded once from Hugging Face; cached locally in your browser |
 | **Your prompts** | Never transmitted anywhere - processed entirely on-device |
 | **Responses** | Generated locally by your GPU via WebGPU |
-| **Conversation history** | Stored in browser's localStorage; persists across sessions, you control deletion |
+| **Conversation history** | Stored in browser's localStorage; persists across sessions, you control deletion (browser limitations apply) |
 | **Third-party servers** | Zero involvement after the initial model download |
 
 Because the model runs on your device, you remain in full control of your data. This makes Chat webCLI suitable for sensitive or personal conversations where cloud-based AI assistants are not appropriate.
