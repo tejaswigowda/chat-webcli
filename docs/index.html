@@ -325,6 +325,18 @@
       color: #e2e8f0;
       border-bottom-left-radius: 4px;
     }
+    .msg.system {
+      align-self: center;
+      background: #2d3148;
+      color: #a0aec0;
+      border-radius: 8px;
+      font-size: 0.9rem;
+      max-width: 80%;
+      text-align: center;
+    }
+    .msg.system:hover {
+      background: #3d4158;
+    }
     .msg.assistant.streaming::after {
       content: "▍";
       display: inline-block;
@@ -774,36 +786,43 @@
       const chunks = getDocumentChunks();
       if (chunks.length === 0) return;
       
-      const existing = chatWindow.querySelector(".doc-info");
-      if (existing) existing.remove();
-      
-      const info = document.createElement("div");
-      info.className = "doc-info";
-      
-      const textDiv = document.createElement("div");
-      textDiv.className = "doc-info-text";
       const docName = allChats[currentChatId]?.docName || "Document";
-      textDiv.innerHTML = `<i class="fas fa-file-alt"></i><span><strong>${docName}</strong> (${chunks.length} chunks)</span>`;
+      const docMessage = `📄 <strong>${docName}</strong> loaded (${chunks.length} chunks) - available for RAG queries`;
       
-      const removeBtn = document.createElement("button");
-      removeBtn.className = "doc-info-remove";
-      removeBtn.innerHTML = '<i class="fas fa-times"></i>';
-      removeBtn.addEventListener("click", removeChatDocument);
+      // Create a collapsible document info message
+      const wrap = document.createElement("div");
+      wrap.className = "msg-wrap system";
+      wrap.style.cursor = "pointer";
       
-      info.appendChild(textDiv);
-      info.appendChild(removeBtn);
-      chatWindow.insertBefore(info, chatWindow.firstChild);
-    }
-
-    function removeChatDocument() {
-      if (allChats[currentChatId]) {
-        delete allChats[currentChatId].docChunks;
-        delete allChats[currentChatId].docName;
-        saveChatsToStorage();
-        renderChatList();
-        const docInfo = chatWindow.querySelector(".doc-info");
-        if (docInfo) docInfo.remove();
-      }
+      const label = document.createElement("div");
+      label.className = "msg-label";
+      label.textContent = "System";
+      
+      const bubble = document.createElement("div");
+      bubble.className = "msg system doc-info";
+      bubble.innerHTML = docMessage;
+      bubble.style.userSelect = "none";
+      
+      // Add hover effect
+      wrap.addEventListener("mouseenter", () => wrap.style.opacity = "0.8");
+      wrap.addEventListener("mouseleave", () => wrap.style.opacity = "1");
+      
+      // Add click to remove
+      wrap.addEventListener("click", (e) => {
+        e.stopPropagation();
+        if (allChats[currentChatId]) {
+          delete allChats[currentChatId].docChunks;
+          delete allChats[currentChatId].docName;
+          saveChatsToStorage();
+          renderChatList();
+          wrap.remove();
+        }
+      });
+      
+      wrap.appendChild(label);
+      wrap.appendChild(bubble);
+      chatWindow.appendChild(wrap);
+      chatWindow.scrollTop = chatWindow.scrollHeight;
     }
 
     function parseAndStoreDocument(text, fileName) {
@@ -1003,7 +1022,7 @@
       saveCurrentChat();
       renderChatList();
 
-      const assistantDiv = appendMessage("assistant", "", true);
+      const assistantDiv = appendMessage("assistant", "", true, selectedModel);
 
       try {
         // Get RAG context if documents are loaded
@@ -1085,13 +1104,19 @@
     // Initialize chats on load
     loadChatsFromStorage();
 
-    function appendMessage(role, text, streaming = false) {
+    function appendMessage(role, text, streaming = false, model = null) {
       const wrap = document.createElement("div");
       wrap.className = `msg-wrap ${role}`;
 
       const label = document.createElement("div");
       label.className = "msg-label";
-      label.textContent = role === "user" ? "You" : "Assistant";
+      if (role === "user") {
+        label.textContent = "You";
+      } else if (role === "assistant" && model) {
+        label.textContent = model;
+      } else {
+        label.textContent = "Assistant";
+      }
 
       const bubble = document.createElement("div");
       bubble.className = `msg ${role}${streaming ? " streaming" : ""}`;
