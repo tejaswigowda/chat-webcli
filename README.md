@@ -149,7 +149,8 @@ This app runs inference **100% on your own hardware** inside your browser. There
 | **Model weights** | Downloaded once from Hugging Face; cached locally in your browser |
 | **Your prompts** | Never transmitted anywhere - processed entirely on-device |
 | **Responses** | Generated locally by your GPU via WebGPU |
-| **Conversation history** | Stored in browser's localStorage; persists across sessions, you control deletion (browser limitations apply) |
+| **Conversation history** | Stored in browser's localStorage; persists across sessions, you control deletion |
+| **Uploaded documents** | Stored in localStorage within the chat; limited to ~3MB per document (browser storage quota) |
 | **Third-party servers** | Zero involvement after the initial model download |
 
 Because the model runs on your device, you remain in full control of your data. This makes Chat webCLI suitable for sensitive or personal conversations where cloud-based AI assistants are not appropriate.
@@ -181,6 +182,7 @@ Use AI to ask questions about your documents - entirely on-device. All retrieval
 - **Keyword Matching** - Context chunks are scored by relevance to your query and the top matches are included
 - **No Server Involved** - All document parsing, chunking, and retrieval happens locally in your browser
 - **Full Privacy** - Documents never leave your device; stored only in localStorage within the chat
+- **File Size Limit** - 3MB max per document (localStorage quota protection). For larger documents, split them or summarize key sections first
 
 **How It Works:**
 1. Upload a document to the chat (TXT or PDF)

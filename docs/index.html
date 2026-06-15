@@ -889,7 +889,17 @@
       if (allChats[currentChatId]) {
         allChats[currentChatId].docChunks = chunks;
         allChats[currentChatId].docName = fileName;
-        saveChatsToStorage();
+        try {
+          saveChatsToStorage();
+        } catch (err) {
+          if (err.name === "QuotaExceededError") {
+            statusText.textContent = `Storage quota exceeded. Document too large for browser storage. Try a smaller document or clear old chats.`;
+            delete allChats[currentChatId].docChunks;
+            delete allChats[currentChatId].docName;
+            return;
+          }
+          throw err;
+        }
         displayDocumentInfo();
         statusText.textContent = `Loaded ${fileName} (${chunks.length} chunks)`;
       }
@@ -923,6 +933,13 @@
 
     function handleFileUpload(file) {
       if (!file) return;
+      
+      // Pre-upload size check (localStorage typically has 5-10MB quota per origin)
+      const maxSize = 3 * 1024 * 1024; // 3MB limit for safety
+      if (file.size > maxSize) {
+        statusText.textContent = `File too large (${(file.size / 1024 / 1024).toFixed(1)}MB). Max 3MB to fit in browser storage. Try splitting the document.`;
+        return;
+      }
       
       statusText.textContent = "Processing file...";
       
