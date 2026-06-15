@@ -560,12 +560,15 @@
         messages: [],
         createdAt: new Date().toISOString(),
         model: null,
-        modelsUsed: []
+        modelsUsed: [],
+        docChunks: [],
+        docName: null
       };
       currentChatId = chatId;
       saveChatsToStorage();
       renderChatList();
       loadCurrentChat();
+      displayDocumentInfo();
     }
 
     // Switch to a different chat
@@ -596,6 +599,11 @@
           appendMessage(msg.role, msg.content, false);
         });
       }
+    }
+
+    // Display document info if present
+    function displayDocumentInfoOnLoad() {
+      displayDocumentInfo();
     }
 
     // Save current chat to storage
@@ -751,15 +759,18 @@
       
       const info = document.createElement("div");
       info.className = "doc-info";
-      info.innerHTML = `
-        <div class="doc-info-text">
-          <i class="fas fa-file-alt"></i>
-          <span>${chunks.length} chunks loaded</span>
-        </div>
-        <button class="doc-info-remove" onclick="removeChatDocument()">
-          <i class="fas fa-times"></i>
-        </button>
-      `;
+      
+      const textDiv = document.createElement("div");
+      textDiv.className = "doc-info-text";
+      textDiv.innerHTML = `<i class="fas fa-file-alt"></i><span>${chunks.length} chunks loaded</span>`;
+      
+      const removeBtn = document.createElement("button");
+      removeBtn.className = "doc-info-remove";
+      removeBtn.innerHTML = '<i class="fas fa-times"></i>';
+      removeBtn.addEventListener("click", removeChatDocument);
+      
+      info.appendChild(textDiv);
+      info.appendChild(removeBtn);
       chatWindow.insertBefore(info, chatWindow.firstChild);
     }
 
