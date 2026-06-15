@@ -150,7 +150,7 @@ This app runs inference **100% on your own hardware** inside your browser. There
 | **Your prompts** | Never transmitted anywhere - processed entirely on-device |
 | **Responses** | Generated locally by your GPU via WebGPU |
 | **Conversation history** | Stored in browser's localStorage; persists across sessions, you control deletion |
-| **Uploaded documents** | Stored in localStorage within the chat; limited to ~3MB per document (browser storage quota) |
+| **Uploaded documents** | Stored in IndexedDB within the chat; no practical size limit (supports 50MB+ files) |
 | **Third-party servers** | Zero involvement after the initial model download |
 
 Because the model runs on your device, you remain in full control of your data. This makes Chat webCLI suitable for sensitive or personal conversations where cloud-based AI assistants are not appropriate.
@@ -174,19 +174,19 @@ Your chat data is stored in your browser's `localStorage` under the key `chat-we
 
 ## Keyword-Based Document Retrieval
 
-Use AI to ask questions about your documents - entirely on-device. All retrieval uses keyword matching (no embedding models), keeping the app lightweight and fast.
+Use AI to ask questions about your documents - entirely on-device. All retrieval uses keyword matching (no embedding models), keeping the app lightweight and fast. Documents are stored in IndexedDB for efficient local storage without impacting chat history quotas.
 
 - **Upload Documents** - Add `.txt` or `.pdf` files to any chat via the **Upload Document** button or drag-drop
 - **Per-Chat Documents** - Each conversation can have its own document; uploading to one chat doesn't affect others
 - **Automatic Context Injection** - When you ask a question, the model retrieves the 3 most relevant chunks from your document
 - **Keyword Matching** - Context chunks are scored by relevance to your query and the top matches are included
 - **No Server Involved** - All document parsing, chunking, and retrieval happens locally in your browser
-- **Full Privacy** - Documents never leave your device; stored only in localStorage within the chat
-- **File Size Limit** - 3MB max per document (localStorage quota protection). For larger documents, split them or summarize key sections first
+- **Full Privacy** - Documents never leave your device; stored only in IndexedDB within your browser
+- **Large File Support** - Documents up to 50MB+ supported via IndexedDB (previously limited to 3MB with localStorage)
 
 **How It Works:**
 1. Upload a document to the chat (TXT or PDF)
-2. File is split into 500-character chunks and stored locally
+2. File is split into 500-character chunks and stored locally in IndexedDB
 3. When you send a message, the app finds the most relevant chunks using keyword matching
 4. The top 3 chunks are appended to your prompt as context for the model
 5. The LLM responds using both your question and the document context

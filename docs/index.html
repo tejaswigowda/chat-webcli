@@ -616,6 +616,59 @@
     let allChats = {};
     let editingChatId = null;
 
+    // ──── IndexedDB Setup for Documents ────
+    let documentDB = null;
+    const dbName = "chat-webCLI-db";
+    const dbVersion = 1;
+    const storeName = "documents";
+
+    function initIndexedDB() {
+      return new Promise((resolve, reject) => {
+        const request = indexedDB.open(dbName, dbVersion);
+        request.onerror = () => reject(request.error);
+        request.onsuccess = () => {
+          documentDB = request.result;
+          resolve();
+        };
+        request.onupgradeneeded = (event) => {
+          const db = event.target.result;
+          if (!db.objectStoreNames.contains(storeName)) {
+            db.createObjectStore(storeName, { keyPath: "chatId" });
+          }
+        };
+      });
+    }
+
+    function storeDocumentChunks(chatId, chunks, docName) {
+      return new Promise((resolve, reject) => {
+        const tx = documentDB.transaction(storeName, "readwrite");
+        const store = tx.objectStore(storeName);
+        store.put({ chatId, chunks, docName, timestamp: Date.now() });
+        tx.onerror = () => reject(tx.error);
+        tx.oncomplete = () => resolve();
+      });
+    }
+
+    function getStoredDocumentChunks(chatId) {
+      return new Promise((resolve, reject) => {
+        const tx = documentDB.transaction(storeName, "readonly");
+        const store = tx.objectStore(storeName);
+        const request = store.get(chatId);
+        request.onerror = () => reject(request.error);
+        request.onsuccess = () => resolve(request.result);
+      });
+    }
+
+    function deleteStoredDocumentChunks(chatId) {
+      return new Promise((resolve, reject) => {
+        const tx = documentDB.transaction(storeName, "readwrite");
+        const store = tx.objectStore(storeName);
+        store.delete(chatId);
+        tx.onerror = () => reject(tx.error);
+        tx.oncomplete = () => resolve();
+      });
+    }
+
     // Load chats from localStorage
     function loadChatsFromStorage() {
       const stored = localStorage.getItem("chat-webCLI-chats");
@@ -647,14 +700,13 @@
         createdAt: new Date().toISOString(),
         model: null,
         modelsUsed: [],
-        docChunks: [],
         docName: null
       };
       currentChatId = chatId;
       saveChatsToStorage();
       renderChatList();
       loadCurrentChat();
-      displayDocumentInfo();
+      displayDocumentInfo(); // displayDocumentInfo is now async but we don't need to await it here
     }
 
     // Switch to a different chat
@@ -805,10 +857,21 @@
     // ──── Document RAG Functions ────
 
     function getDocumentChunks() {
-      if (!allChats[currentChatId] || !allChats[currentChatId].docChunks) {
+      // Note: This is now async via getStoredDocumentChunks()
+      // Use getStoredDocumentChunks() to fetch from IndexedDB
+      if (!allChats[currentChatId]) {
         return [];
       }
-      return allChats[currentChatId].docChunks;
+      // Return a marker; actual chunks fetched via getStoredDocumentChunks()
+      return allChats[currentChatId].docName ? true : false;
+    }
+
+    async function getDocumentChunksFromStorage() {
+      if (!allChats[currentChatId]) {
+        return [];
+      }
+      const data = await getStoredDocumentChunks(currentChatId);
+      return data ? data.chunks : [];
     }
 
     function scoreRelevance(query, text) {
@@ -823,8 +886,8 @@
       return score;
     }
 
-    function retrieveRelevantContext(query, maxChunks = 3) {
-      const chunks = getDocumentChunks();
+    async function retrieveRelevantContext(query, maxChunks = 3) {
+      const chunks = await getDocumentChunksFromStorage();
       if (chunks.length === 0) return "";
       
       const scored = chunks.map(chunk => ({
@@ -836,12 +899,12 @@
       return relevant ? `\n\n[Context from document]\n${relevant}` : "";
     }
 
-    function displayDocumentInfo() {
-      const chunks = getDocumentChunks();
+    async function displayDocumentInfo() {
+      const chunks = await getDocumentChunksFromStorage();
       if (chunks.length === 0) return;
       
       const docName = allChats[currentChatId]?.docName || "Document";
-      const docMessage = `📄 <strong>${docName}</strong> loaded (${chunks.length} chunks) - available for RAG queries`;
+      const docMessage = `📄 <strong>${docName}</strong> loaded (${chunks.length} chunks) - available for retrieval`;
       
       // Create a collapsible document info message
       const wrap = document.createElement("div");
@@ -862,11 +925,11 @@
       wrap.addEventListener("mouseleave", () => wrap.style.opacity = "1");
       
       // Add click to remove
-      wrap.addEventListener("click", (e) => {
+      wrap.addEventListener("click", async (e) => {
         e.stopPropagation();
         if (allChats[currentChatId]) {
-          delete allChats[currentChatId].docChunks;
           delete allChats[currentChatId].docName;
+          await deleteStoredDocumentChunks(currentChatId);
           saveChatsToStorage();
           renderChatList();
           wrap.remove();
@@ -879,7 +942,7 @@
       chatWindow.scrollTop = chatWindow.scrollHeight;
     }
 
-    function parseAndStoreDocument(text, fileName) {
+    async function parseAndStoreDocument(text, fileName) {
       const chunkSize = 500;
       const chunks = [];
       for (let i = 0; i < text.length; i += chunkSize) {
@@ -887,20 +950,16 @@
       }
       
       if (allChats[currentChatId]) {
-        allChats[currentChatId].docChunks = chunks;
         allChats[currentChatId].docName = fileName;
         try {
+          await storeDocumentChunks(currentChatId, chunks, fileName);
           saveChatsToStorage();
         } catch (err) {
-          if (err.name === "QuotaExceededError") {
-            statusText.textContent = `Storage quota exceeded. Document too large for browser storage. Try a smaller document or clear old chats.`;
-            delete allChats[currentChatId].docChunks;
-            delete allChats[currentChatId].docName;
-            return;
-          }
-          throw err;
+          statusText.textContent = `Error storing document: ${err.message}`;
+          delete allChats[currentChatId].docName;
+          return;
         }
-        displayDocumentInfo();
+        await displayDocumentInfo();
         statusText.textContent = `Loaded ${fileName} (${chunks.length} chunks)`;
       }
     }
@@ -931,30 +990,24 @@
       }
     }
 
-    function handleFileUpload(file) {
+    async function handleFileUpload(file) {
       if (!file) return;
-      
-      // Pre-upload size check (localStorage typically has 5-10MB quota per origin)
-      const maxSize = 3 * 1024 * 1024; // 3MB limit for safety
-      if (file.size > maxSize) {
-        statusText.textContent = `File too large (${(file.size / 1024 / 1024).toFixed(1)}MB). Max 3MB to fit in browser storage. Try splitting the document.`;
-        return;
-      }
       
       statusText.textContent = "Processing file...";
       
       if (file.type === "application/pdf") {
-        extractPDFText(file).then(text => {
-          parseAndStoreDocument(text, file.name);
-        }).catch(err => {
+        try {
+          const text = await extractPDFText(file);
+          await parseAndStoreDocument(text, file.name);
+        } catch (err) {
           statusText.textContent = `Error: ${err.message}`;
-        });
+        }
       } else {
         const reader = new FileReader();
-        reader.onload = (e) => {
+        reader.onload = async (e) => {
           try {
             let text = e.target.result;
-            parseAndStoreDocument(text, file.name);
+            await parseAndStoreDocument(text, file.name);
           } catch (err) {
             statusText.textContent = `Error loading file: ${err.message}`;
           }
@@ -1131,7 +1184,7 @@
 
       try {
         // Get RAG context if documents are loaded
-        const ragContext = retrieveRelevantContext(text);
+        const ragContext = await retrieveRelevantContext(text);
         const systemPrompt = `You are a helpful AI assistant.${ragContext ? ragContext : ""}`;
 
         const chunks = await engine.chat.completions.create({
@@ -1206,8 +1259,17 @@
     // Multi-chat event listeners
     newChatBtn.addEventListener("click", createNewChat);
 
-    // Initialize chats on load
-    loadChatsFromStorage();
+    // Initialize IndexedDB and chats on load
+    (async () => {
+      try {
+        await initIndexedDB();
+        loadChatsFromStorage();
+      } catch (err) {
+        console.error("Failed to initialize IndexedDB:", err);
+        // Fall back to storage without document support
+        loadChatsFromStorage();
+      }
+    })();
 
     function appendMessage(role, text, streaming = false, model = null) {
       const wrap = document.createElement("div");
