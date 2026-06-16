@@ -595,10 +595,12 @@
 
   <script type="module">
     import * as webllm from "https://esm.run/@mlc-ai/web-llm";
+    // Semantic embeddings for RAG - runs entirely locally
+    const { pipeline } = await import("https://cdn.jsdelivr.net/npm/@xenova/transformers@2.6.0");
+    let embeddingPipeline = null;
 
     const modelSelect  = document.getElementById("model-select");
     const loadBtn      = document.getElementById("load-btn");
-    const uploadBtn    = document.getElementById("upload-btn");
     const uploadIconBtn = document.getElementById("upload-icon-btn");
     const fileInput    = document.getElementById("file-input");
     const statusText   = document.getElementById("status-text");
@@ -611,6 +613,42 @@
     const newChatBtn   = document.getElementById("new-chat-btn");
     const chatList     = document.getElementById("chat-list");
 
+    // ──── Semantic Embedding Functions ────
+    async function initEmbeddings() {
+      if (!embeddingPipeline) {
+        statusText.textContent = "Loading embedding model (runs locally, first time only)...";
+        try {
+          embeddingPipeline = await pipeline('feature-extraction', 'Xenova/all-MiniLM-L6-v2');
+          statusText.textContent = "Embedding model ready";
+        } catch (err) {
+          console.error("Failed to load embedding model:", err);
+          statusText.textContent = "Warning: Could not load embeddings, using keyword matching";
+          embeddingPipeline = null;
+        }
+      }
+      return embeddingPipeline;
+    }
+
+    async function getEmbedding(text) {
+      if (!embeddingPipeline) return null;
+      try {
+        const result = await embeddingPipeline(text, { pooling: 'mean', normalize: true });
+        return Array.from(result.data);
+      } catch (err) {
+        console.error("Error computing embedding:", err);
+        return null;
+      }
+    }
+
+    function cosineSimilarity(vecA, vecB) {
+      if (!vecA || !vecB) return 0;
+      let dotProduct = 0;
+      for (let i = 0; i < vecA.length; i++) {
+        dotProduct += vecA[i] * vecB[i];
+      }
+      return dotProduct;
+    }
+
     // Multi-chat storage
     let currentChatId = null;
     let allChats = {};
@@ -619,7 +657,7 @@
     // ──── IndexedDB Setup for Documents ────
     let documentDB = null;
     const dbName = "chat-webCLI-db";
-    const dbVersion = 1;
+    const dbVersion = 2;
     const storeName = "documents";
 
     function initIndexedDB() {
@@ -639,11 +677,11 @@
       });
     }
 
-    function storeDocumentChunks(chatId, chunks, docName) {
+    function storeDocumentChunks(chatId, chunks, docName, embeddings = null) {
       return new Promise((resolve, reject) => {
         const tx = documentDB.transaction(storeName, "readwrite");
         const store = tx.objectStore(storeName);
-        store.put({ chatId, chunks, docName, timestamp: Date.now() });
+        store.put({ chatId, chunks, docName, embeddings, timestamp: Date.now() });
         tx.onerror = () => reject(tx.error);
         tx.oncomplete = () => resolve();
       });
@@ -874,7 +912,8 @@
       return data ? data.chunks : [];
     }
 
-    function scoreRelevance(query, text) {
+    function scoreRelevanceKeyword(query, text) {
+      // Fallback keyword matching
       const queryWords = query.toLowerCase().split(/\s+/).filter(w => w.length > 2);
       const textWords = text.toLowerCase().split(/\s+/);
       let score = 0;
@@ -887,15 +926,39 @@
     }
 
     async function retrieveRelevantContext(query, maxChunks = 3) {
-      const chunks = await getDocumentChunksFromStorage();
-      if (chunks.length === 0) return "";
+      if (!allChats[currentChatId]) return "";
       
-      const scored = chunks.map(chunk => ({
-        text: chunk,
-        score: scoreRelevance(query, chunk)
-      })).filter(c => c.score > 0).sort((a, b) => b.score - a.score);
+      const data = await getStoredDocumentChunks(currentChatId);
+      if (!data || data.chunks.length === 0) return "";
       
-      const relevant = scored.slice(0, maxChunks).map(c => c.text).join("\n\n");
+      const chunks = data.chunks;
+      const embeddings = data.embeddings || [];
+      const useSemanticScoring = embeddingPipeline && embeddings.length === chunks.length;
+      
+      let scored;
+      
+      if (useSemanticScoring) {
+        // Use semantic similarity
+        const queryEmbedding = await getEmbedding(query);
+        scored = chunks.map((chunk, idx) => ({
+          text: chunk,
+          score: queryEmbedding ? cosineSimilarity(queryEmbedding, embeddings[idx]) : 0
+        }));
+      } else {
+        // Fallback to keyword matching
+        scored = chunks.map(chunk => ({
+          text: chunk,
+          score: scoreRelevanceKeyword(query, chunk)
+        }));
+      }
+      
+      const relevant = scored
+        .filter(c => c.score > (useSemanticScoring ? 0.3 : 0))
+        .sort((a, b) => b.score - a.score)
+        .slice(0, maxChunks)
+        .map(c => c.text)
+        .join("\n\n");
+      
       return relevant ? `\n\n[Context from document]\n${relevant}` : "";
     }
 
@@ -952,7 +1015,24 @@
       if (allChats[currentChatId]) {
         allChats[currentChatId].docName = fileName;
         try {
-          await storeDocumentChunks(currentChatId, chunks, fileName);
+          // Compute embeddings for semantic search
+          let embeddings = null;
+          await initEmbeddings();
+          
+          if (embeddingPipeline) {
+            statusText.textContent = `Processing document... computing embeddings...`;
+            embeddings = [];
+            for (let i = 0; i < chunks.length; i++) {
+              const embedding = await getEmbedding(chunks[i]);
+              embeddings.push(embedding);
+              if ((i + 1) % 5 === 0) {
+                const progress = Math.round((i + 1) / chunks.length * 100);
+                statusText.textContent = `Processing embeddings: ${progress}%`;
+              }
+            }
+          }
+          
+          await storeDocumentChunks(currentChatId, chunks, fileName, embeddings);
           saveChatsToStorage();
         } catch (err) {
           statusText.textContent = `Error storing document: ${err.message}`;
@@ -960,7 +1040,8 @@
           return;
         }
         await displayDocumentInfo();
-        statusText.textContent = `Loaded ${fileName} (${chunks.length} chunks)`;
+        const method = embeddingPipeline ? "semantic search" : "keyword matching";
+        statusText.textContent = `Loaded ${fileName} (${chunks.length} chunks) — using ${method}`;
       }
     }
 
@@ -1161,7 +1242,6 @@
       userInput.style.height = "auto";
       sendBtn.disabled = true;
       uploadIconBtn.disabled = true;
-      uploadIconBtn.disabled = true;
       userInput.disabled = true;
       emptyState.style.display = "none";
 
@@ -1218,7 +1298,6 @@
 
       sendBtn.disabled = false;
       uploadIconBtn.disabled = false;
-      uploadIconBtn.disabled = false;
       userInput.disabled = false;
       userInput.focus();
     }
@@ -1229,7 +1308,6 @@
     });
 
     // File upload and drag-drop
-    uploadBtn.addEventListener("click", () => fileInput.click());
     uploadIconBtn.addEventListener("click", () => fileInput.click());
     fileInput.addEventListener("change", (e) => {
       if (e.target.files[0]) handleFileUpload(e.target.files[0]);

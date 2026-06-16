@@ -30,7 +30,7 @@ Another tool in the webCLI family of zero-egress, offline-first browser tools, a
 
 ✔ **Chat Management** – Edit chat titles, view which model was used in each conversation
 
-✔ **Keyword-Based Document Retrieval** – Upload documents (TXT, PDF) per chat; LLM uses keyword scoring to inject relevant context (no embedding model)
+✔ **Semantic Document Retrieval** – Upload documents (TXT, PDF) per chat; LLM uses embedding-based semantic search to inject relevant context entirely locally (no cloud embeddings model)
 
 ✔ **Document Tracking** – Uploaded files appear as clickable chat messages with removal option
 
@@ -75,8 +75,10 @@ Another tool in the webCLI family of zero-egress, offline-first browser tools, a
 - **Upload Documents** – Click **Upload Document** button or drag a file onto the chat window
 - **Supported Formats** – `.txt` (plain text) and `.pdf` (PDF files)
 - **Per-Chat Documents** – Each chat can have its own document; uploading to one chat doesn't affect others
-- **Automatic Context** – When you send a message, the model automatically retrieves relevant chunks from the document
+- **Semantic Search** – On first document upload, an embedding model (~27 MB) downloads and caches locally, then computes embeddings for all chunks. Subsequent queries use cosine similarity to find the most relevant passages—understanding meaning, not just keywords
+- **Automatic Context** – When you send a message, the LLM automatically retrieves the top 3 most semantically similar chunks and includes them in the system prompt
 - **Remove Document** – Click the ✕ button on the document indicator to unload it from the current chat
+- **Local Inference Only** – Embedding model, document chunks, and all retrieval logic run entirely in your browser; no calls to external APIs
 
 All conversation data and uploaded documents are automatically saved to your browser's local storage and persist across sessions.
 
@@ -172,30 +174,42 @@ Your chat data is stored in your browser's `localStorage` under the key `chat-we
 
 ---
 
-## Keyword-Based Document Retrieval
+## Semantic Document Retrieval
 
-Use AI to ask questions about your documents - entirely on-device. All retrieval uses keyword matching (no embedding models), keeping the app lightweight and fast. Documents are stored in IndexedDB for efficient local storage without impacting chat history quotas.
+Ask AI questions about your documents using semantic search - entirely on-device. The app uses a lightweight embedding model (Xenova/all-MiniLM-L6-v2) that runs 100% locally to compute vector embeddings, then retrieves the most semantically relevant passages using cosine similarity. No embeddings sent to external services.
 
 - **Upload Documents** - Add `.txt` or `.pdf` files to any chat via the **Upload Document** button or drag-drop
 - **Per-Chat Documents** - Each conversation can have its own document; uploading to one chat doesn't affect others
-- **Automatic Context Injection** - When you ask a question, the model retrieves the 3 most relevant chunks from your document
-- **Keyword Matching** - Context chunks are scored by relevance to your query and the top matches are included
-- **No Server Involved** - All document parsing, chunking, and retrieval happens locally in your browser
-- **Full Privacy** - Documents never leave your device; stored only in IndexedDB within your browser
-- **Large File Support** - Documents up to 50MB+ supported via IndexedDB (previously limited to 3MB with localStorage)
+- **Embedding Model** - First upload triggers a one-time ~27 MB download of the embedding model, then caches it locally for instant reuse
+- **Semantic Matching** - Context chunks are scored by semantic similarity to your query (not just keyword matching), so it understands meaning and paraphrasing
+- **Automatic Context Injection** - When you ask a question, the model retrieves the 3 most semantically similar chunks from your document
+- **Graceful Fallback** - If the embedding model fails to load, automatically falls back to keyword matching
+- **No Server Involved** - All document parsing, chunking, embedding, and retrieval happens locally in your browser
+- **Full Privacy** - Documents and embeddings never leave your device; stored only in IndexedDB within your browser
+- **Large File Support** - Documents up to 50MB+ supported via IndexedDB
 
 **How It Works:**
 1. Upload a document to the chat (TXT or PDF)
-2. File is split into 500-character chunks and stored locally in IndexedDB
-3. When you send a message, the app finds the most relevant chunks using keyword matching
-4. The top 3 chunks are appended to your prompt as context for the model
-5. The LLM responds using both your question and the document context
+2. Embedding model loads and computes embeddings for document chunks
+3. Chunks (384-dimensional vectors) and raw text stored locally in IndexedDB
+4. When you send a message, your query is embedded using the same model
+5. Cosine similarity computed between query embedding and all chunk embeddings
+6. Top 3 most similar chunks appended to your prompt as context
+7. The LLM responds using both your question and the semantically relevant document context
 
 **Example Workflow:**
 - Upload a technical document to chat A
-- Ask questions about it - the model has automatic access to relevant sections
+- Ask questions in different ways - the model finds relevant sections even with paraphrased queries
 - Switch to chat B and upload a different document
 - The model in chat B only sees context from its document, not chat A's
+- All embeddings cached locally for instant retrieval on future queries
+
+**Technical Details:**
+- Embedding model: `Xenova/all-MiniLM-L6-v2` (28M parameters, 27 MB)
+- Embedding dimension: 384
+- Chunking: 500-character sliding chunks
+- Similarity threshold: 0.3 (cosine similarity score)
+- Context window: Top 3 chunks per query
 
 ---
 
